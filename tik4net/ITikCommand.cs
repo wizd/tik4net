@@ -10,7 +10,9 @@ namespace tik4net
     /// </summary>
     /// <seealso cref="ITikConnection"/>
     /// <seealso cref="ITikConnection.CreateCommand()"/>
-    /// <seealso cref="TikCommandException"/>
+    /// <seealso cref="TikCommandTrapException"/>
+    /// <seealso cref="TikCommandFatalException"/>
+    /// <seealso cref="TikCommandAbortException"/>
     public interface ITikCommand
     {
         /// <summary>
@@ -43,18 +45,92 @@ namespace tik4net
         /// <summary>
         /// Excecutes given <see cref="CommandText"/> on router and ensures that operation was sucessfull.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
         void ExecuteNonQuery();
 
         /// <summary>
-        /// Executes given <see cref="CommandText"/> on router and ensures that operation returns one value (=ret parameter), which is returned as result.
+        /// Executes given <see cref="CommandText"/> on router and ensures that operation returns one value (=ret parameter) or single value in single !re row, which is returned as result.
         /// </summary>
         /// <returns>Value returned by router.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
         string ExecuteScalar();
+
+        /// <summary>
+        /// Executes given <see cref="CommandText"/> on router and ensures that operation returns single value (<paramref name="target"/> field) in single !re row, which is returned as result.
+        /// Usefull to return one value from one selected row (for example .id of searched record).
+        /// </summary>
+        /// <param name="target">Name of returned field.</param>
+        /// <returns>Value returned by router.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
+        string ExecuteScalar(string target);
+
+        /// <summary>
+        /// Executes given <see cref="CommandText"/> on router and returns one value (=ret parameter) or single value in single !re row, which is returned as result. If value is not found, than returns <c>null</c>.
+        /// </summary>
+        /// <returns>Value returned by router or <c>null</c>.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
+        string ExecuteScalarOrDefault();
+
+        /// <summary>
+        /// Executes given <see cref="CommandText"/> on router and returns one value (=ret parameter) or single value in single !re row, which is returned as result. If value is not found, than returns <paramref name="defaultValue"/>.
+        /// </summary>
+        /// <returns>Value returned by router or <paramref name="defaultValue"/>.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
+        string ExecuteScalarOrDefault(string defaultValue);
+
+        /// <summary>
+        /// Executes given <see cref="CommandText"/> on router and returns one value (=ret parameter) or single value in single !re row, which is returned as result. If value is not found, than returns <paramref name="defaultValue"/>.
+        /// Usefull to return one value from one selected row (for example .id of searched record).
+        /// </summary>
+        /// <param name="target">Name of returned field.</param>
+        /// <returns>Value returned by router or <paramref name="defaultValue"/>.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
+        string ExecuteScalarOrDefault(string defaultValue, string target);
 
         /// <summary>
         /// Executes given <see cref="CommandText"/> on router and ensures that operation returns exactly one row (1x !re and 1x !done) as result.        
         /// </summary>
         /// <returns>Content of !re sentence.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikCommandAmbiguousResultException">More than one row returned.</exception>
         ITikReSentence ExecuteSingleRow();
 
         /// <summary>
@@ -62,24 +138,51 @@ namespace tik4net
         /// NOTE: !fail exceptions are handled as usual (throws error).
         /// </summary>
         /// <returns>Content of !re sentence or null.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikCommandAmbiguousResultException">More than one row returned.</exception>
         ITikReSentence ExecuteSingleRowOrDefault();
 
         /// <summary>
         /// Executes given <see cref="CommandText"/> on router and returns all result sentences (all !re sentences) as result.
         /// </summary>
         /// <returns>List of !re sentences</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
         IEnumerable<ITikReSentence> ExecuteList();
+
+        /// <summary>
+        /// Executes given <see cref="CommandText"/> on router and returns all result sentences (all !re sentences) as result.
+        /// </summary>
+        /// <param name="proplistFields">List of fields to be returned (only subset of fields will be returned).</param>
+        /// <returns>List of !re sentences</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        IEnumerable<ITikReSentence> ExecuteList(params string[] proplistFields);
 
         /// <summary>
         /// Executes given <see cref="CommandText"/> on router and returns all result sentences (all !re sentences) which are returned during <paramref name="durationSec"/> wait.<br>
         /// After this period, command is automatically stopped via <see cref="CancelAndJoin()"/>.<br>
-        /// Throws <see cref="TikCommandException"/> if command is aborted before <paramref name="durationSec"/>.<br>
+        /// Throws <see cref="TikCommandAbortException"/> if command is aborted before <paramref name="durationSec"/>.<br>
         /// Returns data if command ends before <paramref name="durationSec"/> (!done received).
         /// </summary>
         /// <param name="durationSec">How long will method wait for results.</param>
         /// <returns>List of !re sentences read.</returns>
         /// <remarks>If no error occurs, calling this method blocks calling thread for <paramref name="durationSec"/>.</remarks>
-        /// <exception cref="TikCommandException">If command was aborted before <paramref name="durationSec"/></exception>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
         IEnumerable<ITikReSentence> ExecuteListWithDuration(int durationSec);
 
         /// <summary>
@@ -123,6 +226,23 @@ namespace tik4net
         /// <param name="parameterFormat">How will be parameter formated in mikrotik command.</param>
         /// <returns>Instance of added parameter.</returns>
         ITikCommandParameter AddParameter(string name, string value, TikCommandParameterFormat parameterFormat);
+
+        /// <summary>
+        /// Adds new instance of parameter to <see cref="Parameters"/> list. Type of parameter is resolved from parameter name or from command type.
+        /// </summary>
+        /// <param name="name">Parameter name.</param>
+        /// <param name="value">Parameter value</param>
+        /// <returns>Command - builder pattern.</returns>
+        ITikCommand WithParameter(string name, string value);
+
+        /// <summary>
+        /// Adds new instance of parameter to <see cref="Parameters"/> list with specified <paramref name="parameterFormat"/>.
+        /// </summary>
+        /// <param name="name">Parameter name.</param>
+        /// <param name="value">Parameter value</param>
+        /// <param name="parameterFormat">How will be parameter formated in mikrotik command.</param>
+        /// <returns>Command - builder pattern.</returns>
+        ITikCommand WithParameter(string name, string value, TikCommandParameterFormat parameterFormat);
 
         /// <summary>
         /// Adds newly created instances of <see cref="ITikCommand.Parameters"/>.

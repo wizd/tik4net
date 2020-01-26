@@ -52,6 +52,11 @@ namespace tik4net.Objects
         /// <typeparam name="TEntity">Loaded entities type.</typeparam>
         /// <param name="connection">Tik connection used to load.</param>
         /// <returns>Loaded list of entities.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
         public static IEnumerable<TEntity> LoadAll<TEntity>(this ITikConnection connection)
             where TEntity : new()
         {
@@ -65,10 +70,18 @@ namespace tik4net.Objects
         /// <param name="connection">Tik connection used to load.</param>
         /// <param name="filterParameters">Optional list of filter parameters (interpreted as connected with AND)</param>
         /// <returns>Loaded single entity.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikCommandAmbiguousResultException">More than one row returned.</exception>
         public static TEntity LoadSingle<TEntity>(this ITikConnection connection, params ITikCommandParameter[] filterParameters)
             where TEntity : new()
         {
-            return LoadList<TEntity>(connection, filterParameters).Single();
+            var command = CreateLoadCommandWithFilter<TEntity>(connection, filterParameters);
+            return command.LoadSingle<TEntity>();
         }
 
         /// <summary>
@@ -78,10 +91,17 @@ namespace tik4net.Objects
         /// <param name="connection">Tik connection used to load.</param>
         /// <param name="filterParameters">Optional list of filter parameters (interpreted as connected with AND)</param>
         /// <returns>Loaded single entity or null.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikCommandAmbiguousResultException">More than one row returned.</exception>
         public static TEntity LoadSingleOrDefault<TEntity>(this ITikConnection connection, params ITikCommandParameter[] filterParameters)
             where TEntity : new()
         {
-            return LoadList<TEntity>(connection, filterParameters).SingleOrDefault();
+            var command = CreateLoadCommandWithFilter<TEntity>(connection, filterParameters);
+            return command.LoadSingleOrDefault<TEntity>();
         }
 
         /// <summary>
@@ -91,10 +111,26 @@ namespace tik4net.Objects
         /// <param name="connection">Tik connection used to load.</param>
         /// <param name="id">Entity id.</param>
         /// <returns>Loaded entity or null.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikCommandAmbiguousResultException">More than one row returned.</exception>
         public static TEntity LoadById<TEntity>(this ITikConnection connection, string id)
             where TEntity : new()
         {
-            return LoadList<TEntity>(connection, connection.CreateParameter(TikSpecialProperties.Id, id)).SingleOrDefault();
+            var command = CreateLoadCommandWithFilter<TEntity>(connection, connection.CreateParameter(TikSpecialProperties.Id, id));
+            var candidates = command.LoadList<TEntity>();
+
+            var cnt = candidates.Count();
+            if (cnt == 0)
+                throw new TikNoSuchItemException(command);
+            else if (cnt > 1)
+                throw new TikCommandAmbiguousResultException(command, cnt);
+            else
+                return candidates.Single();
         }
 
         /// <summary>
@@ -104,10 +140,26 @@ namespace tik4net.Objects
         /// <param name="connection">Tik connection used to load.</param>
         /// <param name="name">Entity name.</param>
         /// <returns>Loaded entity or null.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikCommandAmbiguousResultException">More than one row returned.</exception>
         public static TEntity LoadByName<TEntity>(this ITikConnection connection, string name)
             where TEntity : new()
         {
-            return LoadList<TEntity>(connection, connection.CreateParameter("name", name)).SingleOrDefault();
+            var command = CreateLoadCommandWithFilter<TEntity>(connection, connection.CreateParameter("name", name));
+            var candidates = command.LoadList<TEntity>();
+
+            var cnt = candidates.Count();
+            if (cnt == 0)
+                throw new TikNoSuchItemException(command);
+            else if (cnt > 1)
+                throw new TikCommandAmbiguousResultException(command, cnt);
+            else
+                return candidates.Single();
         }
 
         /// <summary>
@@ -118,6 +170,12 @@ namespace tik4net.Objects
         /// <param name="filterParameters">Optional list of filter parameters (interpreted as connected with AND)</param>
         /// <returns>List (or empty list) of loaded entities.</returns>
         /// <seealso cref="TikCommandExtensions.LoadList{TEntity}(ITikCommand)"/>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikCommandAmbiguousResultException">More than one row returned.</exception>
         public static IEnumerable<TEntity> LoadList<TEntity>(this ITikConnection connection, params ITikCommandParameter[] filterParameters)
             where TEntity : new()
         {
@@ -136,6 +194,11 @@ namespace tik4net.Objects
         /// <param name="parameters">Optional list of filters/parameters (interpreted as connected with AND)</param>
         /// <returns>List (or empty list) of loaded entities.</returns>
         /// <seealso cref="TikCommandExtensions.LoadWithDuration{TEntity}(ITikCommand, int)"/>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
         public static IEnumerable<TEntity> LoadWithDuration<TEntity>(this ITikConnection connection, int durationSec, params ITikCommandParameter[] parameters)
             where TEntity : new()
         {
@@ -176,7 +239,7 @@ namespace tik4net.Objects
             return command;
         }
 
-        private static ITikCommand CreateLoadCommandWithFilter<TEntity> (ITikConnection connection, ITikCommandParameter[] parameters)
+        private static ITikCommand CreateLoadCommandWithFilter<TEntity> (ITikConnection connection, params ITikCommandParameter[] parameters)
         {
             var metadata = TikEntityMetadataCache.GetMetadata<TEntity>();
 
@@ -231,6 +294,12 @@ namespace tik4net.Objects
         /// <param name="connection">Tik connection used to save.</param>
         /// <param name="entity">Saved entity.</param>
         /// <param name="usedFieldsFilter">List of field names (on mikrotik) which should be modified. If is not null, only listed fields will be modified.</param>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
         public static void Save<TEntity>(this ITikConnection connection, TEntity entity, IEnumerable<string> usedFieldsFilter = null)
             where TEntity:new()
         {            
@@ -385,6 +454,12 @@ namespace tik4net.Objects
         /// <typeparam name="TEntity">Deleted entity type.</typeparam>
         /// <param name="connection">Tik connection used to delete entity.</param>
         /// <param name="entity">Entity to be deleted (.id property is the key)</param>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
         public static void Delete<TEntity>(this ITikConnection connection, TEntity entity)
         {
             var metadata = TikEntityMetadataCache.GetMetadata<TEntity>();
@@ -405,6 +480,11 @@ namespace tik4net.Objects
         /// <typeparam name="TEntity">Deleted entity type.</typeparam>
         /// <param name="connection">Tik connection used to delete entity.</param>
         /// <returns>Number of deleted entities. </returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
         public static int DeleteAll<TEntity>(this ITikConnection connection)
             where TEntity : new()
         {
@@ -425,6 +505,12 @@ namespace tik4net.Objects
         /// <param name="connection">Tik connection used to move entity.</param>
         /// <param name="entityToMove">Entity to be moved.</param>
         /// <param name="entityToMoveBefore">Entity before which is given <paramref name="entityToMove"/> moved.</param>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
         public static void Move<TEntity>(this ITikConnection connection, TEntity entityToMove, TEntity entityToMoveBefore)
         {
             var metadata = TikEntityMetadataCache.GetMetadata<TEntity>();
@@ -449,6 +535,12 @@ namespace tik4net.Objects
         /// <typeparam name="TEntity">Moved entity type.</typeparam>
         /// <param name="connection">Tik connection used to move entity.</param>
         /// <param name="entityToMove">Entity to be moved.</param>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
         public static void MoveToEnd<TEntity>(this ITikConnection connection, TEntity entityToMove)
         {
             Move(connection, entityToMove, default(TEntity));
@@ -496,6 +588,13 @@ namespace tik4net.Objects
         /// <param name="connection">Tik connection used to load.</param>
         /// <param name="commandText">Command text</param>
         /// <param name="parameters">Optional list of parameters</param>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
         public static void ExecuteNonQuery(this ITikConnection connection, string commandText, params ITikCommandParameter[] parameters)
         {
             var command = connection.CreateCommand(commandText, parameters);
@@ -509,6 +608,13 @@ namespace tik4net.Objects
         /// <param name="commandText">Command text</param>
         /// <param name="parameters">Optional list of parameters</param>
         /// <returns>Value returned by router.</returns>
+        /// <exception cref="InvalidOperationException">Connection or command text not set. Comand is already running. Connection is not opened. Invalid response from API.</exception>
+        /// <exception cref="TikCommandTrapException">!trap returned from API call.</exception>
+        /// <exception cref="TikCommandFatalException">!fatal returned from API call.</exception>
+        /// <exception cref="TikCommandUnexpectedResponseException">Unexpected response from mikrotik (multiple returned rows, missing !done row etc.)</exception>
+        /// <exception cref="TikNoSuchCommandException">Invalid mikrotik command (syntax error). Mikrotik API message: 'no such command'</exception>
+        /// <exception cref="TikNoSuchItemException">Invalid item (bad id/name etc.). Mikrotik API message: 'no such item'.</exception>
+        /// <exception cref="TikAlreadyHaveSuchItemException">Duplicit item (duplicit id/name etc.). Mikrotik API message: 'already have such item'.</exception>
         public static string ExecuteScalar(this ITikConnection connection, string commandText, params ITikCommandParameter[] parameters)
         {
             var command = connection.CreateCommand(commandText, parameters);

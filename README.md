@@ -18,14 +18,19 @@ It has 3 parts:
 * Easy to understand and well documented code
 
 # Binaries
+***Stable***
 * [![NuGet](https://img.shields.io/nuget/v/tik4net.svg)](https://www.nuget.org/packages/tik4net)
-* [dlls download](http://forum.mikrotik.com/viewtopic.php?t=99954)
+* [builded dlls download](http://forum.mikrotik.com/viewtopic.php?t=99954)
+
+***In development (v 3.6)***
+* Download as sources.
 
 # Getting started and documentation
 Project wiki:
 * [wiki root](https://github.com/danikf/tik4net/wiki) 
 * [CRUD examples for all APIs](https://github.com/danikf/tik4net/wiki/CRUD-examples-for-all-APIs)
 * [how to use](https://github.com/danikf/tik4net/wiki/How-to-use-tik4net-library)
+* [History](https://github.com/danikf/tik4net/wiki/History)
 
 Examples:
 * [example project](https://github.com/danikf/tik4net/blob/master/tik4net.examples/ProgramExamples.cs)
@@ -72,20 +77,15 @@ Examples:
   Console.ReadLine();
   torchCmd.Cancel();
 ```
-
-Builded binaries (dlls) could be downloaded from [mikrotik official forum](http://forum.mikrotik.com/viewtopic.php?t=99954).
-
   
 # Looking for help
 * Importing other classes
 * Looking for betatesters
 
-# Roadmap
+# Roadmap & future
 * create highlevel classes for all mikrotik entities (you can still generate your own classes)
 * create tiklink project - easy use-to wrapper over mikrotik router with fluent API 
 * convert examples to separate unittests (in progress)
-
-Future:
 * create and contribute to tiktop (see linux iftop) project 
 
 REMARKS: This project is rewritten version of deprecated tik4net at googlecode (last version was 0.9.7.)
