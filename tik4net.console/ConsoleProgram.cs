@@ -11,7 +11,7 @@ namespace tik4net.console
     {
         static void Main(string[] args)
         {
-            using (ITikConnection connection = ConnectionFactory.CreateConnection(TikConnectionType.Api))
+            using (ITikConnection connection = ConnectionFactory.CreateConnection(TikConnectionType.Api_v2))
             {
                 connection.OnReadRow += Connection_OnReadRow;
                 connection.OnWriteRow += Connection_OnWriteRow;
